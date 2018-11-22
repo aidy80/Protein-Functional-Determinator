@@ -1,3 +1,8 @@
+/*
+ * Program to find each pfam and the sequences that it occurs in. These 
+ * sequences are then accordingly sent to the directory pFam
+ */
+
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -26,6 +31,7 @@ typedef tuple<string, string, int, int > pfamProtein;
 typedef tuple<string, string, vector<int>, vector<int> > combinedPfamProtein;
 typedef struct protein protein;
 
+//split a large stringed sentence into a vector of words
 vector<string> split(string& s, char delimiter) {
     vector<string> words;
     string currWord;
@@ -36,6 +42,9 @@ vector<string> split(string& s, char delimiter) {
     return words;
 }
 
+//Go through the protein/pfam relationship file and 
+//add the data for each protein/pfam relationsion to a vector of pfamProtein
+//structs
 vector<pfamProtein> getProteinLabels() {
     ifstream relations;
     relations.open("Pfam-A.regions.tsv");
@@ -61,6 +70,9 @@ vector<pfamProtein> getProteinLabels() {
 	return proteinLabels;
 }
 
+//Go through the protein/pfam relationships and combined them such that there
+//is a unique protein in each entry, no repeats. To do so, each protein may
+//have many pfams
 vector<combinedPfamProtein> mergeRepeats(vector<pfamProtein> currLabels) {
 	vector<combinedPfamProtein> newLabels;
 	string lastProtein = "";
@@ -91,7 +103,9 @@ vector<combinedPfamProtein> mergeRepeats(vector<pfamProtein> currLabels) {
 	return newLabels;
 }
 
-
+//Go through all of the protein sequences and get is so that there is a
+//vector of data relating the idea that each pfam label is directly linked with 
+//many different protein sequences
 unordered_map<string, vector<protein> > getAllPfams(
 									vector<combinedPfamProtein>& proteinLabels) {
 	unordered_map<string, vector<protein>> allPfams;
@@ -137,6 +151,8 @@ unordered_map<string, vector<protein> > getAllPfams(
 	return allPfams;
 }
 
+//Output to files the relationships between proteins and pfams. Each file
+//represents a given pfam and the protein sequences that it contains
 void outputFiles(unordered_map<string, vector<protein> > &allPfams) {
 	for (auto it = allPfams.begin(); 
 					it != allPfams.end(); it++) {
@@ -150,6 +166,9 @@ void outputFiles(unordered_map<string, vector<protein> > &allPfams) {
 	}
 }
 
+//Main to collect information about the relationships between pfams and the
+//sequences that they occur in. Data is then written in many files in the
+//directory pfams.
 int main() {
 	vector<pfamProtein> proteinLabels = getProteinLabels();
 
