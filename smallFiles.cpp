@@ -6,21 +6,25 @@
 #include <map>
 #include <unordered_map>
 #include <tuple>
+#include <limits.h>
 
 using namespace std;
 
 #define MAXLABEL 100000000
 #define MAXPROT 10000000
-#define LABELSTART 0
+#define LABELSTART 1
 #define PROTSTART 0
 
-struct pfam {
-	string label;
-	vector<string> proteins;
+struct protein {
+	string seq;
+	int start;
+	int end;
 };
 
 typedef basic_istringstream<char> istringstream;
-typedef struct pfam pfam;
+typedef tuple<string, string, int, int > pfamProtein;
+typedef tuple<string, string, vector<int>, vector<int> > combinedPfamProtein;
+typedef struct protein protein;
 
 vector<string> split(string& s, char delimiter) {
     vector<string> words;
@@ -32,15 +36,7 @@ vector<string> split(string& s, char delimiter) {
     return words;
 }
 
-void writeFile(pfam *currFam) {
-	const string path = "pFams/" + currFam->label;
-	ofstream newFile(path);	
-	for (size_t i = 0; i < currFam->proteins.size(); i++) {
-		newFile << currFam->proteins.at((int)i) + "\n";
-	}
-}
-
-vector< tuple<string, string> > getProteinLabels() {
+vector<pfamProtein> getProteinLabels() {
     ifstream relations;
     relations.open("Pfam-A.regions.tsv");
 
@@ -48,14 +44,16 @@ vector< tuple<string, string> > getProteinLabels() {
         cerr << "relations WHOOPS!";
     }
 
-	vector< tuple<string, string> > proteinLabels;
+	vector<pfamProtein> proteinLabels;
 
 	int count = 0;
     string line; 
     while (getline(relations, line) && count <= MAXLABEL) {
 		if (count >= LABELSTART) {
 			vector<string> words = split(line, '	');
-			proteinLabels.push_back(make_tuple(words.at(0), words.at(4)));
+			int start = stoi(words.at(5));
+			int end = stoi(words.at(6));
+			proteinLabels.push_back(make_tuple(words.at(0), words.at(4), start, end));
 		}
 		count++;
     }
@@ -63,9 +61,40 @@ vector< tuple<string, string> > getProteinLabels() {
 	return proteinLabels;
 }
 
-unordered_map<string, vector<string> > getAllPfams(
-							vector< tuple<string, string> >& proteinLabels) {
-	unordered_map<string, vector<string>> allPfams;
+vector<combinedPfamProtein> mergeRepeats(vector<pfamProtein> currLabels) {
+	vector<combinedPfamProtein> newLabels;
+	string lastProtein = "";
+	string lastLabel = "";
+	vector<int> lastStart;
+	vector<int> lastEnd;
+	for (pfamProtein relation: currLabels) {
+		if (lastProtein.compare(get<0>(relation)) == 0) {
+			lastLabel += " ";
+			lastLabel += get<1>(relation);
+			lastStart.push_back(get<2>(relation));
+			lastEnd.push_back(get<3>(relation));
+		} else {
+			if (lastLabel != "") 
+				newLabels.push_back(make_tuple(lastProtein, lastLabel, lastStart, lastEnd));
+
+			lastStart.clear();
+			lastEnd.clear();
+
+			lastProtein = get<0>(relation);
+			lastLabel = get<1>(relation);
+			lastStart.push_back(get<2>(relation));
+			lastEnd.push_back(get<3>(relation));
+		}
+	}
+	newLabels.push_back(make_tuple(lastProtein, lastLabel, lastStart, lastEnd));
+
+	return newLabels;
+}
+
+
+unordered_map<string, vector<protein> > getAllPfams(
+									vector<combinedPfamProtein>& proteinLabels) {
+	unordered_map<string, vector<protein>> allPfams;
 
 	ifstream proteinFile;
 	proteinFile.open("pfamseq");
@@ -88,10 +117,15 @@ unordered_map<string, vector<string> > getAllPfams(
 			}
 		}
 		else if(trueMatch) {
-			cout << get<0>(proteinLabels.at(numProtein)) << " "  << proteinName << "\n";
 			vector<string> labels = split(get<1>(proteinLabels.at(numProtein)), ' ');
-			for (string label : labels) {
-				allPfams[label].push_back(line);
+			vector<int> start = get<2>(proteinLabels.at(numProtein));
+			vector<int> end = get<3>(proteinLabels.at(numProtein));
+			for (size_t i = 0; i < labels.size(); i++){
+				protein newProtein;
+				newProtein.seq = line;
+				newProtein.start = start.at(i);
+				newProtein.end = end.at(i);
+				allPfams[labels.at(i)].push_back(newProtein);
 			}
 			numProtein++;
 			trueMatch = false;
@@ -103,46 +137,26 @@ unordered_map<string, vector<string> > getAllPfams(
 	return allPfams;
 }
 
-void outputFiles(unordered_map<string, vector<string> > &allPfams) {
-	(void) allPfams;	
+void outputFiles(unordered_map<string, vector<protein> > &allPfams) {
 	for (auto it = allPfams.begin(); 
 					it != allPfams.end(); it++) {
 		const string path = "pFams/" + (string)it->first;
 		ofstream newFile(path);
 		newFile << it->first << "\n";
-		for (string protein: it->second) {
-			newFile << protein << "\n";	
+		for (protein currProtein: it->second) {
+			newFile << currProtein.seq << " " << currProtein.start << " " <<
+												 currProtein.end << "\n";	
 		}
 	}
-}
-
-vector<tuple<string, string> > mergeRepeats(vector<tuple<string, string> > currLabels) {
-	vector<tuple<string, string> > newLabels;
-	string lastProtein = "";
-	string lastLabel = "";
-	for (tuple<string, string> relation: currLabels) {
-		if (lastProtein.compare(get<0>(relation)) == 0) {
-			lastLabel += " ";
-			lastLabel += get<1>(relation);
-		} else {
-			if (lastLabel != "") 
-				newLabels.push_back(make_tuple(lastProtein, lastLabel));
-			lastProtein = get<0>(relation);
-			lastLabel = get<1>(relation);
-		}
-	}
-	newLabels.push_back(make_tuple(lastProtein, lastLabel));
-
-	return newLabels;
 }
 
 int main() {
-	vector< tuple<string, string> > proteinLabels = getProteinLabels();
+	vector<pfamProtein> proteinLabels = getProteinLabels();
 
 	sort(proteinLabels.begin(), proteinLabels.end());
-	proteinLabels = mergeRepeats(proteinLabels);
+	vector<combinedPfamProtein> combinedProteinLabels = mergeRepeats(proteinLabels);
 
-	unordered_map<string, vector<string> > allPfams = getAllPfams(proteinLabels);
+	unordered_map<string, vector<protein> > allPfams = getAllPfams(combinedProteinLabels);
 
 	outputFiles(allPfams);
 
