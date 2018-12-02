@@ -30,8 +30,6 @@ vector<string> split(string& s, char delimiter) {
     return words;
 }
 
-
-
 /*
 #Takes a pfamLabel (string with the pfam filename. i.e. PF04526). This
 #method will then parse the file and return a 2D list corresponding to the
@@ -67,21 +65,32 @@ vector<proteinSeq> parsePfam(string pfamLabel) {
     return currSeqs;
 }
 
-vector<proteinSeq>  parsePfamGo(string pfamLabel, string goLabel, unordered_map<string, vector<string> > GoSeq) {
-	(void) goLabel;
-	(void) GoSeq;
+vector<string> parseGo(string protLabel) {
+	ifstream goFile;
+	goFile.open("goLabels/" + protLabel);
+	if (!goFile.is_open()) {
+		cerr << "Could not find go Label " + protLabel + "\n";	
+	}
+
+	string labels;
+	getline(goFile, labels);
+	vector<string> protLabels = split(labels, ' ');
+
+	return protLabels;
+}
+
+vector<proteinSeq>  parsePfamGo(string pfamLabel, string goLabel) {
     string filename = "pFams/" + pfamLabel;
 	vector<proteinSeq> currSeqs;
 	ifstream proteinFile;
 	proteinFile.open(filename);
 	string currLine;
+	ifstream goFile;
 	while(getline(proteinFile, currLine)) {
 		vector<string> data = split(currLine, ' ');
 		if (data.size() != 1) {
-			//if (GoSeq.contains(data.at(0)) && find(GoSeq[data.at(0)].begin(), 
-			//			GoSeq[data.at(0)].end(), goLabel) != GoSeq[data.at(0)].end()) {
-			if (find(GoSeq[data.at(0)].begin(), 
-						GoSeq[data.at(0)].end(), goLabel) != GoSeq[data.at(0)].end()) {
+			vector<string> goLabels = parseGo(data.at(0));
+			if (find(goLabels.begin(), goLabels.end(), goLabel) != goLabels.end()) {
 				proteinSeq newSeq;
 				newSeq.name = data.at(0);
 				newSeq.seq = data.at(1);
@@ -95,26 +104,34 @@ vector<proteinSeq>  parsePfamGo(string pfamLabel, string goLabel, unordered_map<
     return currSeqs;
 }
 
-unordered_map<string, vector<string> > parseGOLabels() {
+void parseGOLabels() {
     unordered_map<string, vector<string> > GoSeq;
 	string filename = "goa_human.gaf";
-	ifstream proteinFile;
-	proteinFile.open(filename);
+	ifstream allGo;
+	allGo.open(filename);
 	string currLine;
-	while(getline(proteinFile, currLine)) {
-		vector<string> data = split(currLine, ' ');
-        if (data.at(0) == "UniProtKB") {
-			GoSeq[data.at(1)].push_back(data.at(2));
+	string currProtein = "";
+	ofstream goFile;
+	while(getline(allGo, currLine)) {
+		vector<string> data = split(currLine, '\t');
+        if (!data.at(0).compare("UniProtKB")) {
+			if (!(!currProtein.compare(data.at(1)))) { //If they are not equal
+				if (goFile.is_open()) {
+					goFile.close();
+				}
+				string currFile = "goLabels/" + data.at(1);
+				currProtein = data.at(1);	
+				goFile.open("goLabels/" + data.at(1));
+			}
+			goFile << data.at(4) << " ";
 		}
 	}
-        
-    return GoSeq;
 }
     
 
 //EXAMPLE!
 int main() {
-	unordered_map<string, vector<string> > GoSeq = parseGOLabels();
+	parseGOLabels();
 
 	/*
     vector<proteinSeq> currSeqs = parsePfam("PF04526");
@@ -125,7 +142,7 @@ int main() {
         cout << "Pfam ending Position: " << currSeqs.at(i).end << "\n\n";
 	}
 	*/
-	vector<proteinSeq> currSeqs = parsePfamGo("PF04526", "GO:0004531", GoSeq);
+	vector<proteinSeq> currSeqs = parsePfamGo("PF04526", "GO:0004531");
     for (size_t i = 0; i < currSeqs.size(); i++) {
         cout << "Protein sequence name: " << currSeqs.at(i).name << "\n";
         cout << "Entire protein sequence: " << currSeqs.at(i).seq << "\n";

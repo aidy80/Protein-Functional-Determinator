@@ -1,3 +1,5 @@
+import os
+
 #Function to parse through given pfam files and return a 2D list with the
 #protein sequence information
 
@@ -26,17 +28,34 @@ def parsePfam(pfamLabel):
 
     return currSeqs
 
-def parsePfamGo(pfamLabel, goLabel, GoSeq):
+def parseGo(protLabel):
+    filename = "goLabels/%s" % (protLabel)
+    if not os.path.exists(filename):
+        print protLabel + " Does not exist"
+        return []
+    with open(filename, "r") as goFile:
+        for line in goFile:
+            print line.split()
+            return line.split()
+
+def parsePfamGo(pfamLabel, goLabel):
     filename = "pFams/%s" % (pfamLabel)
     currSeqs = []
+    if not os.path.exists(filename):
+        print pfamLabel + "Does not exist"
+        return
     with open(filename, "r") as currFamFile:
         for line in currFamFile:
             data = line.split()
             if (len(data) != 1):
-                if (data[0] in GoSeq.keys() and goLabel in GoSeq[data[0]]):
+                goLabels = parseGo(data[0])
+                if(goLabel in goLabels):
+                    print "HERE"
                     data[2] = int(data[2])
                     data[3] = int(data[3])
                     currSeqs.append(data)
+                else:
+                    print goLabel + " not found\n"
 
     return currSeqs
 
@@ -69,8 +88,8 @@ def testMain():
         print "Pfam ending position: ", seq[3], "\n"
         """
 
-    GoSeq = parseGOLabels()
-    currSeqs = parsePfamGo("PF03265", "GO:0004531", GoSeq)
+    #GoSeq = parseGOLabels()
+    currSeqs = parsePfamGo("PF03265", "GO:0004531")
     for seq in currSeqs:
         print "Protien name: ", seq[0]
         print "Entire protein sequence: ", seq[1]
