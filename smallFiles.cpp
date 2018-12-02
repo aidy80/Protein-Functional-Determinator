@@ -21,6 +21,7 @@ using namespace std;
 #define PROTSTART 0
 
 struct protein {
+	string name;
 	string seq;
 	int start;
 	int end;
@@ -130,12 +131,14 @@ unordered_map<string, vector<protein> > getAllPfams(
 				trueMatch = true;
 			}
 		}
-		else if(trueMatch) {
+		else if (trueMatch) {
+			string currProteinName = get<0>(proteinLabels.at(numProtein));
 			vector<string> labels = split(get<1>(proteinLabels.at(numProtein)), ' ');
 			vector<int> start = get<2>(proteinLabels.at(numProtein));
 			vector<int> end = get<3>(proteinLabels.at(numProtein));
 			for (size_t i = 0; i < labels.size(); i++){
 				protein newProtein;
+				newProtein.name = currProteinName;
 				newProtein.seq = line;
 				newProtein.start = start.at(i);
 				newProtein.end = end.at(i);
@@ -160,8 +163,8 @@ void outputFiles(unordered_map<string, vector<protein> > &allPfams) {
 		ofstream newFile(path);
 		newFile << it->first << "\n";
 		for (protein currProtein: it->second) {
-			newFile << currProtein.seq << " " << currProtein.start << " " <<
-												 currProtein.end << "\n";	
+			newFile << currProtein.name << " " << currProtein.seq << " " 
+						<< currProtein.start << " " << currProtein.end << "\n";	
 		}
 	}
 }

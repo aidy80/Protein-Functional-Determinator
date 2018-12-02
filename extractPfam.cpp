@@ -6,10 +6,12 @@
 #include <vector>
 #include <sstream>
 #include <fstream>
+#include <unordered_map>
 
 using namespace std;
 
 struct proteinSeq {
+	string name;
 	string seq;
 	int start;
 	int end;
@@ -54,9 +56,10 @@ vector<proteinSeq> parsePfam(string pfamLabel) {
 		vector<string> data = split(currLine, ' ');
 		if (data.size() != 1) {
 			proteinSeq newSeq;
-			newSeq.seq = data.at(0);
-			newSeq.start = stoi(data.at(1));
-			newSeq.end = stoi(data.at(2));
+			newSeq.name = data.at(0);
+			newSeq.seq = data.at(1);
+			newSeq.start = stoi(data.at(2));
+			newSeq.end = stoi(data.at(3));
 			currSeqs.push_back(newSeq);
 		}
 	}
@@ -64,10 +67,67 @@ vector<proteinSeq> parsePfam(string pfamLabel) {
     return currSeqs;
 }
 
+vector<proteinSeq>  parsePfamGo(string pfamLabel, string goLabel, unordered_map<string, vector<string> > GoSeq) {
+	(void) goLabel;
+	(void) GoSeq;
+    string filename = "pFams/" + pfamLabel;
+	vector<proteinSeq> currSeqs;
+	ifstream proteinFile;
+	proteinFile.open(filename);
+	string currLine;
+	while(getline(proteinFile, currLine)) {
+		vector<string> data = split(currLine, ' ');
+		if (data.size() != 1) {
+			//if (GoSeq.contains(data.at(0)) && find(GoSeq[data.at(0)].begin(), 
+			//			GoSeq[data.at(0)].end(), goLabel) != GoSeq[data.at(0)].end()) {
+			if (find(GoSeq[data.at(0)].begin(), 
+						GoSeq[data.at(0)].end(), goLabel) != GoSeq[data.at(0)].end()) {
+				proteinSeq newSeq;
+				newSeq.name = data.at(0);
+				newSeq.seq = data.at(1);
+				newSeq.start = stoi(data.at(2));
+				newSeq.end = stoi(data.at(3));
+				currSeqs.push_back(newSeq);
+			}
+		}
+	}
+
+    return currSeqs;
+}
+
+unordered_map<string, vector<string> > parseGOLabels() {
+    unordered_map<string, vector<string> > GoSeq;
+	string filename = "goa_human.gaf";
+	ifstream proteinFile;
+	proteinFile.open(filename);
+	string currLine;
+	while(getline(proteinFile, currLine)) {
+		vector<string> data = split(currLine, ' ');
+        if (data.at(0) == "UniProtKB") {
+			GoSeq[data.at(1)].push_back(data.at(2));
+		}
+	}
+        
+    return GoSeq;
+}
+    
+
 //EXAMPLE!
 int main() {
+	unordered_map<string, vector<string> > GoSeq = parseGOLabels();
+
+	/*
     vector<proteinSeq> currSeqs = parsePfam("PF04526");
     for (size_t i = 0; i < currSeqs.size(); i++) {
+        cout << "Protein sequence name: " << currSeqs.at(i).name << "\n";
+        cout << "Entire protein sequence: " << currSeqs.at(i).seq << "\n";
+        cout << "Pfam starting Position: " << currSeqs.at(i).start << "\n";
+        cout << "Pfam ending Position: " << currSeqs.at(i).end << "\n\n";
+	}
+	*/
+	vector<proteinSeq> currSeqs = parsePfamGo("PF04526", "GO:0004531", GoSeq);
+    for (size_t i = 0; i < currSeqs.size(); i++) {
+        cout << "Protein sequence name: " << currSeqs.at(i).name << "\n";
         cout << "Entire protein sequence: " << currSeqs.at(i).seq << "\n";
         cout << "Pfam starting Position: " << currSeqs.at(i).start << "\n";
         cout << "Pfam ending Position: " << currSeqs.at(i).end << "\n\n";

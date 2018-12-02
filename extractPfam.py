@@ -13,25 +13,68 @@
 #See test main below for an example
 #
 #Let Aidan know if you have any questions
-def parsePfam(self, pfamLabel):
+def parsePfam(pfamLabel):
     filename = "pFams/%s" % (pfamLabel)
     currSeqs = []
     with open(filename, "r") as currFamFile:
         for line in currFamFile:
             data = line.split()
             if (len(data) != 1):
-                data[1] = int(data[1])
                 data[2] = int(data[2])
+                data[3] = int(data[3])
                 currSeqs.append(data)
 
     return currSeqs
 
+def parsePfamGo(pfamLabel, goLabel, GoSeq):
+    filename = "pFams/%s" % (pfamLabel)
+    currSeqs = []
+    with open(filename, "r") as currFamFile:
+        for line in currFamFile:
+            data = line.split()
+            if (len(data) != 1):
+                if (data[0] in GoSeq.keys() and goLabel in GoSeq[data[0]]):
+                    data[2] = int(data[2])
+                    data[3] = int(data[3])
+                    currSeqs.append(data)
+
+    return currSeqs
+
+
+
+def parseGOLabels():
+    GoSeq = {}
+    with open("goa_human.gaf") as goFile:
+        for line in goFile:
+            data = line.split()
+            if (data[0] == "UniProtKB"):
+                if data[1] not in GoSeq.keys():
+                    GoSeq[data[1]] = [data[3]]
+                else:
+                    GoSeq[data[1]].append(data[3])
+        
+    return GoSeq
+    
+
+
+
 #EXAMPLE!
 def testMain():
+    """
     currSeqs = parsePfam("PF04526")
     for seq in currSeqs:
-        print "Entire protein sequence: ", seq[0]
-        print "Pfam starting position: ", seq[1]
-        print "Pfam ending position: ", seq[2], "\n"
+        print "Protien name: ", seq[0]
+        print "Entire protein sequence: ", seq[1]
+        print "Pfam starting position: ", seq[2]
+        print "Pfam ending position: ", seq[3], "\n"
+        """
+
+    GoSeq = parseGOLabels()
+    currSeqs = parsePfamGo("PF03265", "GO:0004531", GoSeq)
+    for seq in currSeqs:
+        print "Protien name: ", seq[0]
+        print "Entire protein sequence: ", seq[1]
+        print "Pfam starting position: ", seq[2]
+        print "Pfam ending position: ", seq[3], "\n"
 
 testMain()
