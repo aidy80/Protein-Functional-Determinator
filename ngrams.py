@@ -47,6 +47,9 @@ def jaccard (s1, s2):
 
 def diversity (seqs, n):
 
+    if (len(seqs) == 0):
+        return "No sequences to check"
+
     ngLists = getNgrams(seqs, n)
     length = len(seqs)
     scores = []
@@ -59,33 +62,41 @@ def diversity (seqs, n):
 
     return np.mean(scores)
 
-# Input:    Pfam and GO identifiers, pfam exclusion variable
-# Output:   Diversity of sequences
-# 
-# Takes a pfam and GO identifier and gathers all sequences matching both
-# identifiers; calculates and returns diversity of set of sequences with pfams
-# removed if excludePfam is true, diversity of set of whole sequences otherwise
+import csv
+import os
 
-def testMain (pf, go, excludePfam):
+def testMain (excludePfam):
 
-    with open("github/" + pf + go) as inFile:
+    counter = 0
 
-        seqs = []
+    files = os.listdir("github/results/")
+    divList = []
 
-        for line in inFile.readlines():
+    length = len(files)
+    print length
 
-            line = line.split()
-            pfamStart = int(line[2])
-            pfamEnd = int(line[3])
+    for file in files:
 
-            if (excludePfam):
-                seq = line[1][:pfamStart] + line[1][pfamEnd:]
-            else:
-                seq = line[1]
+        with open("github/results/" + file) as inFile:
 
-            seqs.append(seq)
+            seqs = []
 
-    div = diversity(seqs, 3)
-    print div
+            for line in inFile.readlines():
 
-testMain("PF03265", "GO0004531", True)
+                line = line.split()
+                pfamStart = int(line[2])
+                pfamEnd = int(line[3])
+
+                if (excludePfam):
+                    seq = line[1][:pfamStart] + line[1][pfamEnd:]
+                else:
+                    seq = line[1]
+
+                seqs.append(seq)
+
+        div = diversity(seqs, 100)
+
+        counter += 1
+        print("{},{}".format(file, div))
+
+testMain(False)
