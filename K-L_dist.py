@@ -58,7 +58,7 @@ def testMain (excludePfam):
   for file in files:
     with open("github/results/" + file) as inputFile:
       seqs = []
-      for line in inputFile.readLines():
+      for line in inputFile.readlines():
         line = line.split()
         pfamStart = int(line[2])
         pfamEnd   = int(line[3])
@@ -73,8 +73,10 @@ def testMain (excludePfam):
         if i == j:
           pass
         else:
-          divergence = dist(seqs[i][0],seqs[j][0])
-          distance += divergence
-
+          divergence = dist(seqs[i],seqs[j])
+          distance += divergence / len(seqs[i])
+    distance = distance/len(seqs)      
     counter += 1
     print("{},{}".format(file,distance))
+
+testMain(False)
