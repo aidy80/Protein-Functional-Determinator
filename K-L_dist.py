@@ -1,8 +1,6 @@
 import math
-
-with open("PF00024.txt") as textFile:
-        data = [line.split() for line in textFile]
-
+import csv
+import os
 
 #Probability function 
 #Input:  String of protein characters
@@ -37,27 +35,46 @@ def div(matrixP,matrixQ):
         P_Q = P_i / Q_i 
         distance += P_i * math.log10(P_Q)
       else:
-        distance += 0 
+        P_i = matrixP[i][1] / matrixP[i][2]
+        Q_i = 0.001
+        P_Q = P_i / Q_i 
+        distance += P_i * math.log10(P_Q)
   return distance
 
 
 #function that takes as input two strings and returns as output the k-l divergence
+
 def dist(string1,string2):
   matrix1 = prob(string1) 
   matrix2 = prob(string2)
   d = div(matrix1,matrix2)
   return d
 
-distance1 = 0.0
-for i in range(len(data)- 1):
-  for j in range(len(data) - 1):
-    if i == j:
-      pass
-    else:
-      divergence = dist(data[i][0],data[j][0])
-      distance1 += divergence
+def testMain (excludePfam):
+  counter = 0
+  files = os.listdir("github/results/")
+  divList = []
 
-print distance1
+  for file in files:
+    with open("github/results/" + file) as inputFile:
+      seqs = []
+      for line in inputFile.readLines():
+        line = line.split()
+        pfamStart = int(line[2])
+        pfamEnd   = int(line[3])
+        if (excludePfam):
+          seq = line[1][:pfamStart] + line[1][pfamEnd:]
+        else:
+          seq = line[1]
+        seqs.append(seq)
+    distance = 0.0
+    for i in range(len(seqs)- 1):
+      for j in range(len(seqs) - 1):
+        if i == j:
+          pass
+        else:
+          divergence = dist(seqs[i][0],seqs[j][0])
+          distance += divergence
 
-
-
+    counter += 1
+    print("{},{}".format(file,distance))
